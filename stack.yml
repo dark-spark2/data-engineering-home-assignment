@@ -1,48 +1,67 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CloudFormation template to create a Lambda function that prints "Hello, World!".
+Description: >
+  This CloudFormation stack creates an AWS Glue Data Catalog database,
+  schemaless tables,
+  a manually defined Glue table for CSV data stored in S3, and a Glue crawler
+  configured to update the table schema automatically. The stack includes
+  all necessary resources with required properties to manage Glue metadata
+  efficiently within the current AWS account.
+
+Parameters:
+  StockDatabaseName:
+    Type: String
+    Description: Name of the Glue database
+    Default: stock_data_rotemg
+
+  DailyReturnTableName:
+    Type: String
+    Description: Name of the Glue table
+    Default: daily_return
+
+  BaseLocation:
+    Type: String
+    Description: Base S3 location for table data (must end with a slash)
+    Default: s3://data-engineer-assignment-rotemg/input/
 
 Resources:
-    LambdaExecutionRole:
-        Type: "AWS::IAM::Role"
-        Properties:
-            AssumeRolePolicyDocument:
-                Version: "2012-10-17"
-                Statement:
-                    - Effect: "Allow"
-                      Principal:
-                          Service:
-                              - "lambda.amazonaws.com"
-                      Action: "sts:AssumeRole"
-            Policies:
-                - PolicyName: "LambdaExecutionPolicy"
-                  PolicyDocument:
-                      Version: "2012-10-17"
-                      Statement:
-                          - Effect: "Allow"
-                            Action:
-                                - "logs:CreateLogGroup"
-                                - "logs:CreateLogStream"
-                                - "logs:PutLogEvents"
-                            Resource: "arn:aws:logs:*:*:*"
 
-    HelloWorldLambda:
-        Type: "AWS::Lambda::Function"
-        Properties:
-            FunctionName: "HelloWorldFunction"
-            Handler: "index.handler"
-            Role: !GetAtt LambdaExecutionRole.Arn
-            Runtime: "python3.9"
-            Code:
-                ZipFile: |
-                    def handler(event, context):
-                        print("Hello, World!")
-            Timeout: 30
-            MemorySize: 128
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref StockDatabaseName
+
+  GlueTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref StockDatabaseName
+      TableInput:
+        Name: !Ref DailyReturnTableName
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: csv
+          EXTERNAL: "TRUE"
+        StorageDescriptor:
+          Location: !Sub "${BaseLocation}${DailyReturnTableName}/"
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          StoredAsSubDirectories: false
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters: {}
 
 Outputs:
-    LambdaFunctionName:
-        Description: "Name of the Lambda function created"
-        Value: !Ref HelloWorldLambda
-    LambdaExecutionRoleArn:
-        Description: "ARN of the Lambda execution role"
-        Value: !GetAtt LambdaExecutionRole.Arn
+  StockDatabaseName:
+    Description: Name of the Glue database
+    Value: !Ref StockDatabaseName
+    Export:
+      Name: StockDatabaseName
+
+  DailyReturnTableName:
+    Description: Name of the Glue table
+    Value: !Ref DailyReturnTableName
+    Export:
+      Name: DailyReturnTableName
