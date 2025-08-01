@@ -18,10 +18,50 @@ Parameters:
     Description: Name of the Glue table
     Default: daily_return
 
-  BaseLocation:
+  BaseBucket:
     Type: String
-    Description: Base S3 location for table data (must end with a slash)
-    Default: s3://data-engineer-assignment-rotemg/input/
+    Default: "data-engineer-assignment-rotemg"
+    Description: Base S3 bucket for our tables and input data
+
+  InputS3Prefix:
+    Type: String
+    Default: "input-data"
+    Description: The S3 key prefix for the input CSV data.
+
+  OutputS3Prefix:
+    Type: String
+    Default: "output-data"
+    Description: The S3 key prefix for the output data.
+
+  ScriptS3Prefix:
+    Type: String
+    Default: "glue-scripts"
+    Description: The S3 key for the PySpark script.
+
+  JobName:
+    Type: String
+    Default: "AverageDailyReturnJob"
+    Description: Name of the AWS Glue job.
+
+  GlueVersion:
+    Type: String
+    Default: "4.0"
+    Description: The version of AWS Glue to use for the job.
+
+  WorkerType:
+    Type: String
+    Default: "G.1X"
+    Description: The type of worker to use for the job.
+
+  NumberOfWorkers:
+    Type: Number
+    Default: 2
+    Description: The number of workers to allocate for the job.
+
+  DailyReturnCrawlerName:
+    Type: String
+    Description: Name of the Glue crawler to discover the table schema.
+    Default: DailyReturnCrawler
 
 Resources:
 
@@ -34,6 +74,7 @@ Resources:
 
   GlueTable:
     Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseName: !Ref StockDatabaseName
@@ -41,10 +82,10 @@ Resources:
         Name: !Ref DailyReturnTableName
         TableType: EXTERNAL_TABLE
         Parameters:
-          classification: csv
+          classification: parquet
           EXTERNAL: "TRUE"
         StorageDescriptor:
-          Location: !Sub "${BaseLocation}${DailyReturnTableName}/"
+          Location: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${DailyReturnTableName}/"
           InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
           OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
           Compressed: false
@@ -52,6 +93,58 @@ Resources:
           SerdeInfo:
             SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
             Parameters: {}
+        # Removed explicit column definitions as the crawler will handle schema discovery.
+
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "stock-data-rotemg-GlueJobRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "glue.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
+      Policies:
+        - PolicyName: "S3AccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:ListBucket"
+                  - "s3:DeleteObject"
+                Resource:
+                  - !Sub "arn:aws:s3:::${BaseBucket}"
+                  - !Sub "arn:aws:s3:::${BaseBucket}/*"
+
+  DailyReturnGlueJob:
+    Type: AWS::Glue::Job
+    DependsOn:
+    - GlueDatabase
+    - GlueJobRole
+    Properties:
+      Name: !Ref JobName
+      Role: !Ref GlueJobRole
+      WorkerType: !Ref WorkerType
+      NumberOfWorkers: !Ref NumberOfWorkers
+      GlueVersion: !Ref GlueVersion
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub "s3://${BaseBucket}/${ScriptS3Prefix}/daily_return_job.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}"
+        "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
+      MaxRetries: 0
+      Timeout: 30
 
 Outputs:
   StockDatabaseName:
@@ -65,3 +158,12 @@ Outputs:
     Value: !Ref DailyReturnTableName
     Export:
       Name: DailyReturnTableName
+
+  GlueJobRoleArn:
+    Description: The ARN of the Glue job IAM role
+    Value: !GetAtt GlueJobRole.Arn
+
+  DailyReturnGlueJob:
+    Description: The name of the AWS Glue job created by this stack.
+    Value: !Ref DailyReturnGlueJob
+ 
