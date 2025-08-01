@@ -72,7 +72,7 @@ Resources:
       DatabaseInput:
         Name: !Ref StockDatabaseName
 
-  GlueTable:
+  DailyReturnTable:
     Type: AWS::Glue::Table
     DependsOn: GlueDatabase
     Properties:
@@ -93,6 +93,7 @@ Resources:
           SerdeInfo:
             SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
             Parameters: {}
+
         # Removed explicit column definitions as the crawler will handle schema discovery.
 
 
@@ -145,6 +146,25 @@ Resources:
         "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
       MaxRetries: 0
       Timeout: 30
+
+  DailyReturnCrawler:
+    Type: AWS::Glue::Crawler
+    DependsOn:
+      - DailyReturnTable
+      - GlueJobRole
+    Properties:
+      Name: !Ref DailyReturnCrawlerName
+      Role: !GetAtt GlueJobRole.Arn
+      DatabaseName: !Ref StockDatabaseName
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${DailyReturnTableName}/"
+      TablePrefix: ""
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
 
 Outputs:
   StockDatabaseName:
