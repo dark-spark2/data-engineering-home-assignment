@@ -91,7 +91,22 @@ Parameters:
   DailyReturnCrawlerName:
     Type: String
     Description: Name of the Glue crawler to discover the table schema.
-    Default: DailyReturnCrawler
+    Default: DailyReturnCrawlerRotemg
+
+  HighestStockCrawlerName:
+    Type: String
+    Description: Name of the Glue crawler to discover the table schema.
+    Default: HighestStockCrawlerRotemg
+
+  MostVolatileCrawlerName:
+    Type: String
+    Description: Name of the Glue crawler to discover the table schema.
+    Default: MostVolatileCrawlerRotemg
+
+  Top30DaysCrawlerName:
+    Type: String
+    Description: Name of the Glue crawler to discover the table schema.
+    Default: Top30DaysCrawlerRotemg
 
 Resources:
 
@@ -349,6 +364,63 @@ Resources:
       Targets:
         S3Targets:
           - Path: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${DailyReturnTableName}/"
+      TablePrefix: ""
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+
+  HighestStockCrawler:
+    Type: AWS::Glue::Crawler
+    DependsOn:
+      - HighestStockTable
+      - GlueJobRole
+    Properties:
+      Name: !Ref HighestStockCrawlerName
+      Role: !GetAtt GlueJobRole.Arn
+      DatabaseName: !Ref StockDatabaseName
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${HighestStockTableName}/"
+      TablePrefix: ""
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+
+  MostVolatileCrawler:
+    Type: AWS::Glue::Crawler
+    DependsOn:
+      - MostVolatileTable
+      - GlueJobRole
+    Properties:
+      Name: !Ref MostVolatileCrawlerName
+      Role: !GetAtt GlueJobRole.Arn
+      DatabaseName: !Ref StockDatabaseName
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${MostVolatileTableName}/"
+      TablePrefix: ""
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+      RecrawlPolicy:
+        RecrawlBehavior: CRAWL_EVERYTHING
+
+  Top30DaysCrawler:
+    Type: AWS::Glue::Crawler
+    DependsOn:
+      - Top30DaysTable
+      - GlueJobRole
+    Properties:
+      Name: !Ref Top30DaysCrawlerName
+      Role: !GetAtt GlueJobRole.Arn
+      DatabaseName: !Ref StockDatabaseName
+      Targets:
+        S3Targets:
+          - Path: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${Top30DaysTableName}/"
       TablePrefix: ""
       SchemaChangePolicy:
         UpdateBehavior: UPDATE_IN_DATABASE
