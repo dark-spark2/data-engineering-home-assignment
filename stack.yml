@@ -123,7 +123,7 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref StockDatabaseName
-        
+
   # --- Glue Tables: Defines the schema for the output data ---
   DailyReturnTable:
     Type: AWS::Glue::Table
@@ -492,3 +492,27 @@ Outputs:
   Top30DaysGlueJob:
     Description: The name of the AWS Glue job created by this stack.
     Value: !Ref Top30DaysGlueJob
+
+  DailyReturnCrawler:
+    Description: The name of the AWS Glue crawler for daily returns.
+    Value: !Ref DailyReturnCrawler
+    Export:
+      Name: DailyReturnCrawler
+
+  HighestStockCrawler:
+    Description: The name of the AWS Glue crawler for the highest stock.
+    Value: !Ref HighestStockCrawler
+    Export:
+      Name: HighestStockCrawler
+
+  MostVolatileCrawler:
+    Description: The name of the AWS Glue crawler for the most volatile stock.
+    Value: !Ref MostVolatileCrawler
+    Export:
+      Name: MostVolatileCrawler
+
+  Top30DaysCrawler:
+    Description: The name of the AWS Glue crawler for the top 30-day returns.
+    Value: !Ref Top30DaysCrawler
+    Export:
+      Name: Top30DaysCrawler
