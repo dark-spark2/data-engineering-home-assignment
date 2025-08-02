@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   This CloudFormation stack creates an AWS Glue Data Catalog database,
-  schemaless tables,
   a manually defined Glue table for CSV data stored in S3, and a Glue crawler
   configured to update the table schema automatically. The stack includes
   all necessary resources with required properties to manage Glue metadata
