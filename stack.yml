@@ -53,9 +53,24 @@ Parameters:
     Default: "glue-scripts"
     Description: The S3 key for the PySpark script.
 
-  JobName:
+  DailyReturnJobName:
     Type: String
     Default: "AverageDailyReturnJob"
+    Description: Name of the AWS Glue job.
+
+  HighestStockJobName:
+    Type: String
+    Default: "HighestStockJob"
+    Description: Name of the AWS Glue job.
+
+  MostVolatileJobName:
+    Type: String
+    Default: "MostVolatileJob"
+    Description: Name of the AWS Glue job.
+
+  Top30DaysJobName:
+    Type: String
+    Default: "Top30DaysJob"
     Description: Name of the AWS Glue job.
 
   GlueVersion:
@@ -240,7 +255,7 @@ Resources:
     - GlueDatabase
     - GlueJobRole
     Properties:
-      Name: !Ref JobName
+      Name: !Ref DailyReturnJobName
       Role: !Ref GlueJobRole
       WorkerType: !Ref WorkerType
       NumberOfWorkers: !Ref NumberOfWorkers
@@ -252,6 +267,72 @@ Resources:
       DefaultArguments:
         "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
         "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${DailyReturnTableName}/"
+        "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
+      MaxRetries: 0
+      Timeout: 30
+
+  HighestStockGlueJob:
+    Type: AWS::Glue::Job
+    DependsOn:
+    - GlueDatabase
+    - GlueJobRole
+    Properties:
+      Name: !Ref HighestStockJobName
+      Role: !Ref GlueJobRole
+      WorkerType: !Ref WorkerType
+      NumberOfWorkers: !Ref NumberOfWorkers
+      GlueVersion: !Ref GlueVersion
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub "s3://${BaseBucket}/${ScriptS3Prefix}/highest_stock_job.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${HighestStockJobName}/"
+        "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
+      MaxRetries: 0
+      Timeout: 30
+
+  MostVolatileGlueJob:
+    Type: AWS::Glue::Job
+    DependsOn:
+    - GlueDatabase
+    - GlueJobRole
+    Properties:
+      Name: !Ref MostVolatileJobName
+      Role: !Ref GlueJobRole
+      WorkerType: !Ref WorkerType
+      NumberOfWorkers: !Ref NumberOfWorkers
+      GlueVersion: !Ref GlueVersion
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub "s3://${BaseBucket}/${ScriptS3Prefix}/most_volatile_job.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${MostVolatileTableName}/"
+        "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
+      MaxRetries: 0
+      Timeout: 30
+
+  Top30DaysGlueJob:
+    Type: AWS::Glue::Job
+    DependsOn:
+    - GlueDatabase
+    - GlueJobRole
+    Properties:
+      Name: !Ref Top30DaysJobName
+      Role: !Ref GlueJobRole
+      WorkerType: !Ref WorkerType
+      NumberOfWorkers: !Ref NumberOfWorkers
+      GlueVersion: !Ref GlueVersion
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub "s3://${BaseBucket}/${ScriptS3Prefix}/top_30_days_job.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${Top30DaysTableName}/"
         "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
       MaxRetries: 0
       Timeout: 30
