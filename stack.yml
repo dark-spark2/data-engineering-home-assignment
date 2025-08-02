@@ -7,6 +7,10 @@ Description: >
   all necessary resources with required properties to manage Glue metadata
   efficiently within the current AWS account.
 
+# -----------------------------------------------------------------------------
+# Parameters section: Defines all customizable input values for the stack.
+# -----------------------------------------------------------------------------
+
 Parameters:
   StockDatabaseName:
     Type: String
@@ -108,6 +112,9 @@ Parameters:
     Description: Name of the Glue crawler to discover the table schema.
     Default: Top30DaysCrawlerRotemg
 
+# -----------------------------------------------------------------------------
+# Resources section: Defines the AWS resources to be created.
+# -----------------------------------------------------------------------------
 Resources:
 
   GlueDatabase:
@@ -116,7 +123,8 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref StockDatabaseName
-
+        
+  # --- Glue Tables: Defines the schema for the output data ---
   DailyReturnTable:
     Type: AWS::Glue::Table
     DependsOn: GlueDatabase
@@ -264,6 +272,7 @@ Resources:
                   - !Sub "arn:aws:s3:::${BaseBucket}"
                   - !Sub "arn:aws:s3:::${BaseBucket}/*"
 
+  # --- Glue Jobs: Defines the PySpark jobs to run ---
   DailyReturnGlueJob:
     Type: AWS::Glue::Job
     DependsOn:
@@ -352,6 +361,8 @@ Resources:
       MaxRetries: 0
       Timeout: 30
 
+  # --- Glue Crawlers: Defines the crawlers to automatically update partitions ---
+
   DailyReturnCrawler:
     Type: AWS::Glue::Crawler
     DependsOn:
@@ -428,6 +439,9 @@ Resources:
       RecrawlPolicy:
         RecrawlBehavior: CRAWL_EVERYTHING
 
+# -----------------------------------------------------------------------------
+# Outputs section: Defines values exported from the stack.
+# -----------------------------------------------------------------------------
 Outputs:
   StockDatabaseName:
     Description: Name of the Glue database
@@ -467,3 +481,14 @@ Outputs:
     Description: The name of the AWS Glue job created by this stack.
     Value: !Ref DailyReturnGlueJob
  
+  HighestStockGlueJob:
+    Description: The name of the AWS Glue job created by this stack.
+    Value: !Ref HighestStockGlueJob
+
+  MostVolatileGlueJob:
+    Description: The name of the AWS Glue job created by this stack.
+    Value: !Ref MostVolatileGlueJob
+
+  Top30DaysGlueJob:
+    Description: The name of the AWS Glue job created by this stack.
+    Value: !Ref Top30DaysGlueJob
