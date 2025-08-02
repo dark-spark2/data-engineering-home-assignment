@@ -18,6 +18,21 @@ Parameters:
     Description: Name of the Glue table
     Default: daily_return
 
+  HighestStockTableName:
+    Type: String
+    Description: Name of the Glue table
+    Default: highest_stock
+
+  MostVolatileTableName:
+    Type: String
+    Description: Name of the Glue table
+    Default: most_volatile
+
+  Top30DaysTableName:
+    Type: String
+    Description: Name of the Glue table
+    Default: top_30_days
+
   BaseBucket:
     Type: String
     Default: "data-engineer-assignment-rotemg"
@@ -92,10 +107,104 @@ Resources:
           StoredAsSubDirectories: false
           SerdeInfo:
             SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
-            Parameters: {}
+            Parameters: {}          
+          Columns:
+          - Name: date
+            Type: date
+            Comment: "Date of the record"
+          - Name: average_return
+            Type: double
+            Comment: "Average daily return"
 
-        # Removed explicit column definitions as the crawler will handle schema discovery.
+  HighestStockTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref StockDatabaseName
+      TableInput:
+        Name: !Ref HighestStockTableName
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: parquet
+          EXTERNAL: "TRUE"
+        StorageDescriptor:
+          Location: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${HighestStockTableName}/"
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          StoredAsSubDirectories: false
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters: {}          
+          Columns:
+          - Name: ticker
+            Type: string
+            Comment: "stock ticker"
+          - Name: avg_traded_worth
+            Type: double
+            Comment: "Average Traded worth"
 
+  MostVolatileTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref StockDatabaseName
+      TableInput:
+        Name: !Ref MostVolatileTableName
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: parquet
+          EXTERNAL: "TRUE"
+        StorageDescriptor:
+          Location: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${MostVolatileTableName}/"
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          StoredAsSubDirectories: false
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters: {}          
+          Columns:
+          - Name: ticker
+            Type: string
+            Comment: "stock ticker"
+          - Name: annualized_volatility
+            Type: double
+            Comment: "Annual volatility"
+
+  Top30DaysTable:
+    Type: AWS::Glue::Table
+    DependsOn: GlueDatabase
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref StockDatabaseName
+      TableInput:
+        Name: !Ref Top30DaysTableName
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: parquet
+          EXTERNAL: "TRUE"
+        StorageDescriptor:
+          Location: !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${Top30DaysTableName}/"
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: false
+          StoredAsSubDirectories: false
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters: {}          
+          Columns:
+          - Name: ticker
+            Type: string
+            Comment: "stock ticker"
+          - Name: date
+            Type: date
+            Comment: "Date of the record"
+          - Name: 30_day_return
+            Type: double
+            Comment: "The 30 day return diff"
 
   GlueJobRole:
     Type: AWS::IAM::Role
@@ -142,7 +251,7 @@ Resources:
         PythonVersion: "3"
       DefaultArguments:
         "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
-        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${DailyReturnTableName}/"
         "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
       MaxRetries: 0
       Timeout: 30
@@ -178,6 +287,24 @@ Outputs:
     Value: !Ref DailyReturnTableName
     Export:
       Name: DailyReturnTableName
+
+  HighestStockTableName:
+    Description: Name of the Glue table
+    Value: !Ref HighestStockTableName
+    Export:
+      Name: HighestStockTableName
+
+  MostVolatileTableName:
+    Description: Name of the Glue table
+    Value: !Ref MostVolatileTableName
+    Export:
+      Name: MostVolatileTableName
+
+  Top30DaysTableName:
+    Description: Name of the Glue table
+    Value: !Ref Top30DaysTableName
+    Export:
+      Name: Top30DaysTableName
 
   GlueJobRoleArn:
     Description: The ARN of the Glue job IAM role
