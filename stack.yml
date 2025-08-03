@@ -311,7 +311,7 @@ Resources:
         PythonVersion: "3"
       DefaultArguments:
         "--input_path": !Sub "s3://${BaseBucket}/${InputS3Prefix}"
-        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${HighestStockJobName}/"
+        "--output_path": !Sub "s3://${BaseBucket}/${OutputS3Prefix}/${HighestStockTableName}/"
         "--TempDir": !Sub "s3://${BaseBucket}/temporary/"
       MaxRetries: 0
       Timeout: 30
